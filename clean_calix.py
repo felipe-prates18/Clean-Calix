@@ -122,12 +122,21 @@ def gerar_caminho_saida(caminho_csv: str) -> str:
 
 
 if __name__ == "__main__":
-    arquivo = "contatos_de_campanha_2025-11-06T16_05_24.050Z.csv"
-    destino = gerar_caminho_saida(arquivo)
+    pasta_execucao = Path.cwd()
+    arquivos_csv = sorted(
+        arquivo
+        for arquivo in pasta_execucao.glob("*.csv")
+        if not arquivo.stem.endswith("_ajustado")
+    )
 
-    entradas, saidas = processar_csv(arquivo, destino)
+    if not arquivos_csv:
+        print("Nenhum arquivo .csv encontrado na pasta de execução.")
+    else:
+        for arquivo in arquivos_csv:
+            destino = gerar_caminho_saida(arquivo)
+            entradas, saidas = processar_csv(arquivo, destino)
 
-    print(f"Arquivo processado: {arquivo}")
-    print(f"Arquivo gerado:    {destino}")
-    print(f"Linhas originais: {entradas}")
-    print(f"Linhas finais:    {saidas}")
+            print(f"Arquivo processado: {arquivo.name}")
+            print(f"Arquivo gerado:    {Path(destino).name}")
+            print(f"Linhas originais: {entradas}")
+            print(f"Linhas finais:    {saidas}\n")
