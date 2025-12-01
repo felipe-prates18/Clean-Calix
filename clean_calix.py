@@ -2,7 +2,7 @@ import csv
 import re
 from pathlib import Path
 
-PHONE_COLUMNS = [
+DEFAULT_PHONE_COLUMNS = [
     "Celular 1",
     "Celular 2",
     "Celular 3",
@@ -57,10 +57,24 @@ def extrair_detalhes(detalhes_brutos: str):
     return resultados
 
 
-def remover_numero_da_linha(linha: dict, numero_alvo: str):
+def detectar_colunas_telefone(cabecalhos):
+    colunas = []
+    encontrados = set()
+
+    for nome in cabecalhos or []:
+        nome_normalizado = re.sub(r"\s+", "", (nome or "").lower())
+
+        if re.match(r"^(celular|telefone)\d*$", nome_normalizado) and nome_normalizado not in encontrados:
+            colunas.append(nome)
+            encontrados.add(nome_normalizado)
+
+    return colunas or DEFAULT_PHONE_COLUMNS
+
+
+def remover_numero_da_linha(linha: dict, numero_alvo: str, colunas_telefone):
     numero_normalizado = normalizar_numero(numero_alvo)
 
-    for coluna in PHONE_COLUMNS:
+    for coluna in colunas_telefone:
         valor_coluna = linha.get(coluna, "")
         if valor_coluna and normalizar_numero(valor_coluna) == numero_normalizado:
             linha[coluna] = ""
@@ -89,6 +103,7 @@ def processar_csv(caminho_csv: str, caminho_saida: str):
     with open(caminho_csv, "r", encoding="utf-8", newline="") as origem:
         leitor = csv.DictReader(origem, delimiter=";")
         dados_saida = []
+        colunas_telefone = detectar_colunas_telefone(leitor.fieldnames)
 
         for linha in leitor:
             total_entrada += 1
@@ -102,7 +117,7 @@ def processar_csv(caminho_csv: str, caminho_saida: str):
                     break
 
                 if acao == "remover_numero":
-                    remover_numero_da_linha(linha, numero)
+                    remover_numero_da_linha(linha, numero, colunas_telefone)
 
             if not remover_linha:
                 dados_saida.append(linha)
