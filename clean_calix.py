@@ -39,16 +39,29 @@ STATUS_VENDIDOS = {
 }
 
 
-def normalizar_numero(numero: str) -> str:
+def gerar_variantes_numero(numero: str) -> set[str]:
     apenas_digitos = re.sub(r"\D", "", numero or "")
+    if not apenas_digitos:
+        return set()
 
-    if apenas_digitos.startswith("55") and len(apenas_digitos) > 11:
-        apenas_digitos = apenas_digitos[2:]
+    variantes = {apenas_digitos}
+    candidatos = list(variantes)
 
-    if len(apenas_digitos) > 11:
-        apenas_digitos = apenas_digitos[-11:]
+    for candidato in candidatos:
+        if candidato.startswith("55") and len(candidato) > 11:
+            variantes.add(candidato[2:])
+        if candidato.startswith("0") and len(candidato) > 10:
+            variantes.add(candidato[1:])
 
-    return apenas_digitos
+    for candidato in list(variantes):
+        if len(candidato) > 11:
+            variantes.add(candidato[-11:])
+
+    return {variante for variante in variantes if variante}
+
+
+def numeros_equivalentes(numero_a: str, numero_b: str) -> bool:
+    return bool(gerar_variantes_numero(numero_a) & gerar_variantes_numero(numero_b))
 
 
 def extrair_detalhes(detalhes_brutos: str):
@@ -88,24 +101,24 @@ def detectar_colunas_telefone(cabecalhos):
 
 
 def remover_numero_da_linha(linha: dict, numero_alvo: str, colunas_telefone):
-    numero_normalizado = normalizar_numero(numero_alvo)
-
     for coluna in colunas_telefone:
         valor_coluna = linha.get(coluna, "")
-        if valor_coluna and normalizar_numero(valor_coluna) == numero_normalizado:
+        if valor_coluna and numeros_equivalentes(valor_coluna, numero_alvo):
             linha[coluna] = ""
 
 
 def manter_apenas_numeros(linha: dict, numeros_permitidos: set[str], colunas_telefone):
-    numeros_permitidos_norm = {normalizar_numero(n) for n in numeros_permitidos if normalizar_numero(n)}
+    numeros_permitidos_norm = set()
+    for numero in numeros_permitidos:
+        numeros_permitidos_norm.update(gerar_variantes_numero(numero))
 
     for coluna in colunas_telefone:
         valor = linha.get(coluna, "")
         if not valor:
             continue
 
-        valor_norm = normalizar_numero(valor)
-        if not valor_norm or valor_norm not in numeros_permitidos_norm:
+        valor_variantes = gerar_variantes_numero(valor)
+        if not valor_variantes or not valor_variantes.intersection(numeros_permitidos_norm):
             linha[coluna] = ""
 
 
